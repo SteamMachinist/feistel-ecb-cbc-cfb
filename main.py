@@ -44,7 +44,7 @@ def split_message(message):
     return [message[i:i + 64] for i in range(0, len(message), 64)]
 
 
-def pad_block(block):
+def complete_block(block):
     block_len = len(block)
     padded = 0
     if block_len < 64:
@@ -55,16 +55,16 @@ def pad_block(block):
 
 def get_blocks(message):
     blocks = split_message(message)
-    last_block, padded = pad_block(blocks[-1])
+    last_block, completed = complete_block(blocks[-1])
     blocks[-1] = last_block
-    blocks.insert(0, to_array(padded, 64))
+    blocks.insert(0, to_array(completed, 64))
     return blocks
 
 
-def remove_padding(decoded_message):
-    padded = to_int(decoded_message[:64], 64)
+def remove_completion(decoded_message):
+    completed = to_int(decoded_message[:64], 64)
     decoded_message = decoded_message[64:]
-    return decoded_message[:-int(padded)]
+    return decoded_message[:-int(completed)]
 
 
 def encode_block(block, key):
@@ -101,7 +101,7 @@ def ecb_decode(encoded_message, key, iv='unused'):
     for block in split_message(encoded_message):
         decoded_block = decode_block(block, key)
         decoded_message.extend(decoded_block)
-    return np.array(remove_padding(decoded_message))
+    return np.array(remove_completion(decoded_message))
 
 
 def cbc_encode(message, key, iv):
@@ -124,7 +124,7 @@ def cbc_decode(encoded_message, key, iv):
         xor_result = to_array(to_int(decoded_block, 64) ^ to_int(previous_block, 64), 64)
         decoded_message.extend(xor_result)
         previous_block = block
-    return np.array(remove_padding(decoded_message))
+    return np.array(remove_completion(decoded_message))
 
 
 def cfb_encode(message, key, iv):
@@ -147,10 +147,10 @@ def cfb_decode(encoded_message, key, iv):
         xor_result = to_array(to_int(block, 64) ^ to_int(encoded_block, 64), 64)
         decoded_message.extend(xor_result)
         previous_block = block
-    return np.array(remove_padding(decoded_message))
+    return np.array(remove_completion(decoded_message))
 
 
-rounds = 3
+rounds = 5
 
 key = generate_keys(rounds)
 key_str = '\n'.join([''.join(map(str, k)) for k in key])
@@ -159,7 +159,7 @@ print(f"Key:\n{key_str}\n")
 iv = np.random.randint(2, size=64, dtype=np.uint8)
 print(f"Initialization vector:\n{''.join(map(str, iv))}\n")
 
-message_size = 106
+message_size = 92
 
 message = np.random.randint(2, size=message_size, dtype=np.uint8)
 print(f"Original message: {''.join(map(str, message))}")
